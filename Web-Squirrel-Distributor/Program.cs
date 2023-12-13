@@ -17,7 +17,7 @@ namespace Web_Squirrel_Distributor
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new frmUpdateScreen());
+            Application.Run(new frmMenu());
         }
     }
 }

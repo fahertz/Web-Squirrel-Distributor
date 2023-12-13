@@ -50,13 +50,10 @@ namespace Web_Squirrel_Distributor.Configuration
         }
         public static async Task rollbackAsync(string rollbackTag = "Rollback")
         {
-            string[] urls = { _updateUrlWeb + $@"releases/download/{rollbackTag}/Setup.exe"
-                             /*,_updateUrlWeb + $@"releases/download/{rollbackTag}\Setup.msi"*/};
+            string url = _updateUrlWeb + $@"/releases/download/{rollbackTag}/Setup.exe";
             
             using (var httpClient = new HttpClient())
-            {
-                foreach (var url in urls)
-                {
+            {               
                     using (var response = await httpClient.GetAsync(url))
                     {
                         response.EnsureSuccessStatusCode();
@@ -77,8 +74,7 @@ namespace Web_Squirrel_Distributor.Configuration
                             MessageBox.Show(ex.Message);
                         }
                         
-                    }
-                }
+                    }                
             }
         }
         public static async Task<string> CheckForUpdatesAsync()
@@ -98,9 +94,8 @@ namespace Web_Squirrel_Distributor.Configuration
                 }
             }
             catch (Exception ex)
-            {               
-               MessageBox.Show(ex.Message);
-               return null;                
+            {                              
+               return "Doesn't exists any updates.";                
             }                       
         }        
         public static async Task<string> UpdateAppAsync()
@@ -109,11 +104,8 @@ namespace Web_Squirrel_Distributor.Configuration
             {
                 using (var gitHubManager = await UpdateManager.GitHubUpdateManager(_updateUrlWeb))
                 {
-                    var releaseEntry = await gitHubManager.UpdateApp();
-                    if (releaseEntry != null)
-                        return $"Actualized to v{releaseEntry.Version}";
-                    else
-                        return $"Doesn't exists new releases";
+                    var releaseEntry = await gitHubManager.UpdateApp();                    
+                        return $"Actualized to v{releaseEntry.Version}";                    
                 };                
             }
             catch (Exception)

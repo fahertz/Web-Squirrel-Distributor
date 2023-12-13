@@ -15,53 +15,66 @@ namespace Web_Squirrel_Distributor.App
 {
     public partial class frmUpdateScreen : CustomForm
     {
+        /** Instance **/
+        System.Windows.Forms.Timer tUpdate = new System.Windows.Forms.Timer(); //Just for visual
+        bool verified = false;
+        bool updated = false;
+        bool newVersion = false;
         public frmUpdateScreen()
         {
             InitializeComponent();            
             ConfigureFormProperties();
-            ConfigureFormEvents();            
-        }        
-
+            ConfigureLabelProperties();
+            ConfigureFormEvents();
+            
+        }
+        
         /** Async Taks  **/
         private async Task updateApplicationAsync()
         {
             try
-            {
+            {   
+                var version = await WebUpdateSquirrel.CheckVersionAsync();                
+                if (version == Application.ProductVersion)
+                {
+                    UpdateUIForSearchingUpdates();
+                    UpdateUIForUpdateComplete();
+                    lblSearchingForUpdates.Text = "Without new versions.";
+                    lblUpdatingApplication.Text = "Without new versions.";
+                    return;
+                }
+
+
+                var update = await WebUpdateSquirrel.CheckForUpdatesAsync();
+                lblSearchingForUpdates.Text = update;
 
                 
-                var d = await WebUpdateSquirrel.CheckForUpdatesAsync();
-                if (d != null)
-                {
-                    lblSearchingForUpdates.Text = d;
+                if (update.Contains("detected"))
+                {    
                     UpdateUIForSearchingUpdates();
-                    UpdateUIForDownloadComplete();
-                    var d2 = await WebUpdateSquirrel.UpdateAppAsync();
-                    lblDownload.Text = d2;
-
-                    if (d2.Contains("Actualized"))
-                    {
-                        WebUpdateSquirrel.RestartApplication();
+                    lblSearchingForUpdates.Text = update;
+                    lblUpdatingApplication.Text = "Updating Application...";
+                    try
+                    {                        
+                        var att = await WebUpdateSquirrel.UpdateAppAsync();
+                        lblUpdatingApplication.Text = att;
+                        UpdateUIForUpdateComplete();
+                        newVersion = true;
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        this.Hide();
-                        frmMenu frmMenu = new frmMenu();
-                        frmMenu.Show();
-                    }
+                        MessageBox.Show("Update error, please call the support: "+ex.Message);
+                    }                    
                 }
                 else
                 {
                     UpdateUIForSearchingUpdates();
-                    lblSearchingForUpdates.Text = "Doesn't exists new releases";
-                    UpdateUIForDownloadComplete();
-                    lblDownload.Text = "Doesn't exists releases to download";
-                    Thread.Sleep(1000);
-                    this.Hide();
-                    frmMenu frmMenu = new frmMenu();
-                    frmMenu.Show();
-
-
+                    UpdateUIForUpdateComplete();
+                    lblSearchingForUpdates.Text = "Without new versions.";
+                    lblUpdatingApplication.Text = "Without new versions.";
+                    
                 }
+
             }
             catch (Exception ex)
             {
@@ -70,28 +83,30 @@ namespace Web_Squirrel_Distributor.App
             }
             finally
             {
-                //await Task.Delay(5000);
-                //LocalUpdateSquirrel.RestartApplication();
+                lblOpenning.Visible = true;
             }
         }
 
+
         /** Sync Methods **/
         private void UpdateUIForSearchingUpdates()
-        {
-            //lblSearchingForUpdates.Text = $"Version: {LocalUpdateSquirrel.nextVersion} detected. ({Application.ProductVersion} → {LocalUpdateSquirrel.nextVersion})";
+        {            
             UpdateButtonStyle(pcbSearchingForUpdates);
+            verified = true;
         }
-        private void UpdateUIForDownloadComplete()
+        private void UpdateUIForUpdateComplete()
         {
-            //lblDownload.Text = "Download Completed.";
-            UpdateButtonStyle(pcbDownload);
-        }
-       
+            
+            UpdateButtonStyle(pcbUpdatingApplication);
+            updated = true;
+        }       
         private void UpdateButtonStyle(PictureBox pictureBox)
         {
             pictureBox.BackgroundImage = Properties.Resources.Green_Button;
             pictureBox.BackgroundImageLayout = ImageLayout.Stretch;
         }
+
+
 
         /** Form Configuration **/
         private void ConfigureFormEvents()
@@ -104,9 +119,48 @@ namespace Web_Squirrel_Distributor.App
         }
         private async void frmUpdateScreen_Load(object sender, EventArgs e)
         {
+            /** Attributes **/
             ConfigurePictureBoxAttributes();
+            ConfigureLabelAttributes();
+            ConfigureTimerAttributes();
+            
+
+            /** Events **/
+            ConfigureTimerEvents();
+
+
+            /** Searching for Updates**/
             await updateApplicationAsync();
 
+            tUpdate.Start();
+
+        }
+
+        /** Timer Configuration **/
+        private void ConfigureTimerAttributes()
+        {
+            tUpdate.Interval = 2000;
+        }
+        private void ConfigureTimerEvents()
+        {
+            tUpdate.Tick += tUpdate_Tick;
+        }
+
+        private void tUpdate_Tick(object sender, EventArgs e)
+        {
+            if (verified && updated && !newVersion)
+            {
+
+                frmMenu frmMenu = new frmMenu();
+                this.Hide();
+                tUpdate.Stop();
+                frmMenu.Show();                                
+            }
+            else if (verified && updated && newVersion)
+            {
+                WebUpdateSquirrel.RestartApplication();
+            }
+            
         }
 
         /** PictureBox Configuration **/
@@ -114,8 +168,20 @@ namespace Web_Squirrel_Distributor.App
         {
             pcbSearchingForUpdates.BackgroundImage = Properties.Resources.Red_Button;
             pcbSearchingForUpdates.BackgroundImageLayout = ImageLayout.Stretch;
-            pcbDownload.BackgroundImage = Properties.Resources.Red_Button;
-            pcbDownload.BackgroundImageLayout = ImageLayout.Stretch;
+            pcbUpdatingApplication.BackgroundImage = Properties.Resources.Red_Button;
+            pcbUpdatingApplication.BackgroundImageLayout = ImageLayout.Stretch;
+        }
+
+        /** Label Attributes **/
+        private void ConfigureLabelAttributes()
+        {
+            lblSearchingForUpdates.Text = "Searching for Updates...";
+            lblUpdatingApplication.Text = "Waiting...";
+        }
+
+        private void ConfigureLabelProperties()
+        {
+            lblOpenning.Visible = false;
         }
     }
 }
